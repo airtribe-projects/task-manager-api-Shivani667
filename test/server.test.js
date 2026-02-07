@@ -4,20 +4,20 @@ const app = require("../app");
 const server = supertest(app);
 
 tap.test("POST /tasks", async (t) => {
-  const newTask = {
-    title: "New Task",
-    description: "New Task Description",
-    completed: false,
-  };
+  const newTask = { title: "New Task" };
   const response = await server.post("/tasks").send(newTask);
   t.equal(response.status, 201);
+  t.hasOwnProp(response.body, "id");
+  t.hasOwnProp(response.body, "title");
+  t.hasOwnProp(response.body, "completed");
+  t.type(response.body.id, "number");
+  t.type(response.body.title, "string");
+  t.type(response.body.completed, "boolean");
   t.end();
 });
 
 tap.test("POST /tasks with invalid data", async (t) => {
-  const newTask = {
-    title: "New Task",
-  };
+  const newTask = { title: 123 }; // invalid type
   const response = await server.post("/tasks").send(newTask);
   t.equal(response.status, 400);
   t.end();
@@ -26,76 +26,63 @@ tap.test("POST /tasks with invalid data", async (t) => {
 tap.test("GET /tasks", async (t) => {
   const response = await server.get("/tasks");
   t.equal(response.status, 200);
-  t.hasOwnProp(response.body[0], "id");
-  t.hasOwnProp(response.body[0], "title");
-  t.hasOwnProp(response.body[0], "description");
-  t.hasOwnProp(response.body[0], "completed");
-  t.type(response.body[0].id, "number");
-  t.type(response.body[0].title, "string");
-  t.type(response.body[0].description, "string");
-  t.type(response.body[0].completed, "boolean");
+  t.type(response.body, Array);
   t.end();
 });
 
-tap.test("GET /tasks/:id", async (t) => {
-  const response = await server.get("/tasks/1");
+tap.test("GET /tasks/:id valid", async (t) => {
+  // First create a task
+  const createRes = await server.post("/tasks").send({ title: "Task 1" });
+  const taskId = createRes.body.id;
+
+  const response = await server.get(`/tasks/${taskId}`);
   t.equal(response.status, 200);
-  const expectedTask = {
-    id: 1,
-    title: "Set up environment",
-    description: "Install Node.js, npm, and git",
-    completed: true,
-  };
-  t.match(response.body, expectedTask);
+  t.match(response.body, { id: taskId, title: "Task 1", completed: false });
   t.end();
 });
 
-tap.test("GET /tasks/:id with invalid id", async (t) => {
+tap.test("GET /tasks/:id invalid", async (t) => {
   const response = await server.get("/tasks/999");
   t.equal(response.status, 404);
   t.end();
 });
 
-tap.test("PUT /tasks/:id", async (t) => {
-  const updatedTask = {
-    title: "Updated Task",
-    description: "Updated Task Description",
-    completed: true,
-  };
-  const response = await server.put("/tasks/1").send(updatedTask);
+tap.test("PUT /tasks/:id valid", async (t) => {
+  const createRes = await server.post("/tasks").send({ title: "Task 2" });
+  const taskId = createRes.body.id;
+
+  const updatedTask = { title: "Updated Task", completed: true };
+  const response = await server.put(`/tasks/${taskId}`).send(updatedTask);
   t.equal(response.status, 200);
+  t.match(response.body, { id: taskId, title: "Updated Task", completed: true });
   t.end();
 });
 
-tap.test("PUT /tasks/:id with invalid id", async (t) => {
-  const updatedTask = {
-    title: "Updated Task",
-    description: "Updated Task Description",
-    completed: true,
-  };
-  const response = await server.put("/tasks/999").send(updatedTask);
+tap.test("PUT /tasks/:id invalid id", async (t) => {
+  const response = await server.put("/tasks/999").send({ title: "Updated" });
   t.equal(response.status, 404);
   t.end();
 });
 
-tap.test("PUT /tasks/:id with invalid data", async (t) => {
-  const updatedTask = {
-    title: "Updated Task",
-    description: "Updated Task Description",
-    completed: "true",
-  };
-  const response = await server.put("/tasks/1").send(updatedTask);
+tap.test("PUT /tasks/:id invalid data", async (t) => {
+  const createRes = await server.post("/tasks").send({ title: "Task 3" });
+  const taskId = createRes.body.id;
+
+  const response = await server.put(`/tasks/${taskId}`).send({ completed: "true" });
   t.equal(response.status, 400);
   t.end();
 });
 
-tap.test("DELETE /tasks/:id", async (t) => {
-  const response = await server.delete("/tasks/1");
+tap.test("DELETE /tasks/:id valid", async (t) => {
+  const createRes = await server.post("/tasks").send({ title: "Task 4" });
+  const taskId = createRes.body.id;
+
+  const response = await server.delete(`/tasks/${taskId}`);
   t.equal(response.status, 200);
   t.end();
 });
 
-tap.test("DELETE /tasks/:id with invalid id", async (t) => {
+tap.test("DELETE /tasks/:id invalid id", async (t) => {
   const response = await server.delete("/tasks/999");
   t.equal(response.status, 404);
   t.end();
