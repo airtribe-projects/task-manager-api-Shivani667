@@ -1,6 +1,5 @@
 const express = require('express');
 const app = express();
-const port = 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -9,16 +8,24 @@ let tasks = [];
 
 // Create a new task
 app.post('/tasks', (req, res) => {
-    const { title } = req.body;
+    const { title , description, completed } = req.body;
 
     if (!title || typeof title !== 'string') {
         return res.status(400).json({ error: "Title is required and must be a string" });
     }
 
+    if (!description || typeof description !== 'string') {
+        return res.status(400).json({ error: "Description is required and must be a string" });
+    }
+
+    if (completed !== undefined && typeof completed !== 'boolean') {
+        return res.status(400).json({ error: "Completed must be a boolean" });
+    }
     const newTask = {
-        id: tasks.length + 1,
-        title: title.trim(),
-        completed: false
+    id: tasks.length + 1,
+    title: title.trim(),
+    description: description.trim(),
+    completed: completed !== undefined ? completed : false
     };
 
     tasks.push(newTask);
@@ -59,13 +66,20 @@ app.put('/tasks/:id', (req, res) => {
         return res.status(404).json({ error: "Task not found" });
     }
 
-    const { title, completed } = req.body;
+    const { title, description, completed } = req.body;
 
     if (title !== undefined) {
         if (typeof title !== 'string' || !title.trim()) {
             return res.status(400).json({ error: "Title must be a non-empty string" });
         }
         task.title = title.trim();
+    }
+
+    if (description !== undefined) {
+        if (typeof description !== 'string' || !description.trim()) {
+            return res.status(400).json({ error: "Description must be a non-empty string" });
+        }
+        task.description = description.trim();
     }
 
     if (completed !== undefined) {
@@ -90,16 +104,6 @@ app.delete('/tasks/:id', (req, res) => {
     const deletedTask = tasks.splice(index, 1);
     res.json(deletedTask[0]);
 });
-
-
-
-app.listen(port, (err) => {
-    if (err) {
-        return console.log('Something bad happened', err);
-    }
-    console.log(`Server is listening on ${port}`);
-});
-
 
 
 module.exports = app;
